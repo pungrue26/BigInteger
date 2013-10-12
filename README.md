@@ -1,5 +1,3 @@
-BigInteger
-==========
 # Executive Summary #
 * This is **_my solution for a course assignment_** given by Prof. [Byung-Ro Moon](http://soar.snu.ac.kr/~moon//index.html "Title") in his [Data Structure course](http://soar.snu.ac.kr/course.html "Title") at Seoul National University.
 
