@@ -9,6 +9,11 @@ import java.util.regex.Pattern;
 public class BigInteger {
 	private static boolean isResultMinus = false;
 
+	private static String [] extractedSigns = new String [3];
+	private static int extractedSignsNum = 0;
+	private static int [] extractedSignsStartPos = new int [3];
+	private static int caculationResult [] = null;
+	
 	public static void main(String args[]) {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		while (true) {
@@ -27,198 +32,214 @@ public class BigInteger {
 	}
 
 	private static void calculate(String input) {
-		// remove all white spaces in input string.
+		// remove all white spaces in input string
 		input = input.replaceAll("\\s+","");
 		// extract all sign characters, and
-		// put those into a string array named "appearedSigns"
+		// put them into the string array
 		Pattern pattern = Pattern.compile("[\\Q+\\E\\Q-\\E\\Q*\\E]");
 		Matcher matcher = pattern.matcher(input);
-		int appearedSignsNum = 0;
-		String [] appearedSigns = new String [3];
-		int [] appearedSignsStartPos = new int [3];
+		
 		while (matcher.find()) {
-        	appearedSigns[appearedSignsNum] = matcher.group();
-        	appearedSignsStartPos[appearedSignsNum] =  matcher.start();
-        	appearedSignsNum++;
+        	extractedSigns[extractedSignsNum] = matcher.group();
+        	extractedSignsStartPos[extractedSignsNum] =  matcher.start();
+        	extractedSignsNum++;
         }
 		
-		// assume that signs appear at most 3 times.
+		// This logic assumes that signs appear at most 3 times.
 		// Because assignment specification allows to do that. :)
-		int result [] = null;
-		if(appearedSignsNum == 1) {
+		if(extractedSignsNum == 1) {
 			// a (+,-,*) b
-			String operationSymbol = appearedSigns[0];
-			int operationSymbolStartPos = appearedSignsStartPos[0];
-			byte[] firstOperand = new byte[operationSymbolStartPos];
-			for(int i = 0; i < operationSymbolStartPos; i++){
-				firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(i))); 
-			}
-			byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+1)];
-			for(int j = 0, k = operationSymbolStartPos + 1; k < input.length(); j++, k++){
-				secondOperand[j] = Byte.parseByte(String.valueOf(input.charAt(k))); 
-			}	
-			if(operationSymbol.equals("+")) {
-				result = addition(firstOperand, secondOperand);
-			} else if(operationSymbol.equals("-")) {
-				result = subtraction(firstOperand, secondOperand);
-			} else if(operationSymbol.equals("*")) {
-				result = multiplication(firstOperand, secondOperand);
-			}
-		} else if (appearedSignsNum == 2) {
-			// The sign characters are appeared 2 times, and it means that
-			// one character is a sign of operand and the other is symbol of operation. 
-			// We can tell it from checking the first character of input string. 
-			if(appearedSignsStartPos[0] == 0) {
-				// (+,-) a (+,-,*) b
-				// The sign appeared first(sign(appearedSignsStartPos[0])) is sign of first operand, and
-				// the second sign character(sign(appearedSignsStartPos[1])) is the symbol of operation.
-				String operationSymbol = appearedSigns[1];
-				String signOfFirstOperand = appearedSigns[0];
-				int operationSymbolStartPos = appearedSignsStartPos[1];
-				// firstOperand's length is symbolStartPos-1, Cause 1 sign character is included in.
-				byte[] firstOperand = new byte[operationSymbolStartPos-1];
-				for(int i = 0, j = 1; j < operationSymbolStartPos; i++, j++){
-					firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(j))); 
-				}
-				byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+1)];
-				for(int k = 0, l = operationSymbolStartPos + 1; l < input.length(); k++, l++){
-					secondOperand[k] = Byte.parseByte(String.valueOf(input.charAt(l))); 
-				}
-				if(operationSymbol.equals("+")) {
-					if(signOfFirstOperand.equals("+")) {
-						// +a + b
-						result = addition(firstOperand, secondOperand);	
-					} else if(signOfFirstOperand.equals("-")) {
-						// -a + b = b - a
-						result = subtraction(secondOperand, firstOperand);
-					}
-				} else if(operationSymbol.equals("-")) {
-					if(signOfFirstOperand.equals("+")){
-						// +a - b = a - b
-						result = subtraction(firstOperand, secondOperand);
-					} else if(signOfFirstOperand.equals("-")) {
-						// -a - b = -(a + b)
-						isResultMinus = true;
-						result = addition(firstOperand, secondOperand);
-					}
-				} else if(operationSymbol.equals("*")) {
-					if(signOfFirstOperand.equals("+")){
-						// +a * b = a * b
-						result = multiplication(firstOperand, secondOperand);	
-					} else if(signOfFirstOperand.equals("-")){
-						// -a * b = -(a * b)
-						isResultMinus = true;
-						result = multiplication(firstOperand, secondOperand);
-					}
-				}
-			} else {
-				// a (+,-,*) (+,-) b
-				String operationSymbol = appearedSigns[0];
-				String signOfSecondOperand = appearedSigns[1];
-				int operationSymbolStartPos = appearedSignsStartPos[0];
-				byte[] firstOperand = new byte[operationSymbolStartPos];
-				for(int i = 0; i < operationSymbolStartPos; i++){
-					firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(i))); 
-				}
-				byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+2)];
-				for(int j = 0, k = operationSymbolStartPos + 2; k < input.length(); j++, k++){
-					secondOperand[j] = Byte.parseByte(String.valueOf(input.charAt(k))); 
-				}
-				if(operationSymbol.equals("+")) {
-					if(signOfSecondOperand.equals("+")) {
-						// a + (+b) = a + b
-						result = addition(firstOperand, secondOperand);
-					} else if(appearedSigns[1].equals("-")) {
-						// a + (-b) = a - b
-						result = subtraction(firstOperand, secondOperand);
-					}
-				} else if(operationSymbol.equals("-")) {
-					if(signOfSecondOperand.equals("+")) {
-						// a - (+b) = a - b
-						result = subtraction(firstOperand, secondOperand);
-					} else if(signOfSecondOperand.equals("-")) {
-						// a - (-b) = a + b
-						result = addition(firstOperand, secondOperand);
-					}
-				} else if(operationSymbol.equals("*")) {
-					if(signOfSecondOperand.equals("+")) {
-						// a * (+b) = a * b
-						result = multiplication(firstOperand, secondOperand);
-					} else if(signOfSecondOperand.equals("-")) {
-						// a * (-b) = - (a * b)
-						isResultMinus = true;
-						result = multiplication(firstOperand, secondOperand);
-					}
-				}
-			}
-		} else if(appearedSignsNum == 3) {
+			handleOneSign(input);
+		} else if (extractedSignsNum == 2) {
+			// (+,-) a (+,-,*) b
+			// a (+,-,*) (+,-) b
+			handleTwoSigns(input);
+		} else if(extractedSignsNum == 3) {
 			// (+,-)a (+,-,*) (+,-)b
-			String operationSymbol = appearedSigns[1];
-			String signOfFirstOperand = appearedSigns[0];
-			String signOfSecondOperand = appearedSigns[2];
-			
-			int operationSymbolStartPos = appearedSignsStartPos[1];
-			// firstOperand's length is symbolStartPos-1, Cause there is 1 sign character.
+			handleThreeSigns(input);
+		}
+		printResult(caculationResult);
+	}
+	
+	private static void handleThreeSigns(String input) {
+		String operationSymbol = extractedSigns[1];
+		String signOfFirstOperand = extractedSigns[0];
+		String signOfSecondOperand = extractedSigns[2];
+		
+		int operationSymbolStartPos = extractedSignsStartPos[1];
+		// firstOperand's length is symbolStartPos-1, Cause there is 1 sign character.
+		byte[] firstOperand = new byte[operationSymbolStartPos-1];
+		for(int i = 0, j = 1; j < operationSymbolStartPos; i++, j++){
+			firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(j))); 
+		}
+		byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+2)];
+		for(int k = 0, l = operationSymbolStartPos + 2; l < input.length(); k++, l++){
+			secondOperand[k] = Byte.parseByte(String.valueOf(input.charAt(l))); 
+		}
+		
+		if(operationSymbol.equals("+")) {
+			if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
+				// (+a) + (+b) = a + b
+				caculationResult = addition(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
+				// (+a) + (-b) = a - b
+				caculationResult = subtraction(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
+				// (-a) + (+b) = b - a
+				caculationResult = subtraction(secondOperand, firstOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
+				// (-a) + (-b) = -(a + b)
+				isResultMinus = true;
+				caculationResult = addition(secondOperand, firstOperand);					
+			}
+		} else if(operationSymbol.equals("-")) {
+			if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
+				// (+a) - (+b) = a - b
+				caculationResult = subtraction(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
+				// (+a) - (-b) = a + b
+				caculationResult = addition(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
+				// (-a) - (+b) = -a - b = -(a + b)
+				isResultMinus = true;
+				caculationResult = addition(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
+				// (-a) - (-b) = -a + b = b - a
+				caculationResult = subtraction(secondOperand, firstOperand);
+			}
+		} else if(operationSymbol.equals("*")) {
+			if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
+				// (+a) * (+b) = a * b
+				caculationResult = multiplication(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
+				// (+a) * (-b) = -(a * b)
+				isResultMinus = true;
+				caculationResult = multiplication(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
+				// (-a) * (+b) = -(a * b)
+				isResultMinus = true;
+				caculationResult = multiplication(firstOperand, secondOperand);
+			} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
+				// (-a) * (-b) = a * b
+				caculationResult = multiplication(firstOperand, secondOperand);					
+			}
+		}		
+	}
+
+	private static void handleTwoSigns(String input) {
+		// This case means one character is a sign of operand,
+		// and the other is the symbol of operation. 
+		// We can tell it from checking the first character of input string.
+		if(extractedSignsStartPos[0] == 0) {
+			// (+,-) a (+,-,*) b
+			// The sign appeared first is sign of first operand, and
+			// the second sign character is the symbol of operation.
+			String signOfFirstOp = extractedSigns[0];
+			String operationSymbol = extractedSigns[1];
+			int operationSymbolStartPos = extractedSignsStartPos[1];
+			// firstOperand's length is symbolStartPos-1, Cause 1 sign character is included in.
 			byte[] firstOperand = new byte[operationSymbolStartPos-1];
 			for(int i = 0, j = 1; j < operationSymbolStartPos; i++, j++){
 				firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(j))); 
 			}
-			byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+2)];
-			for(int k = 0, l = operationSymbolStartPos + 2; l < input.length(); k++, l++){
+			byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+1)];
+			for(int k = 0, l = operationSymbolStartPos + 1; l < input.length(); k++, l++){
 				secondOperand[k] = Byte.parseByte(String.valueOf(input.charAt(l))); 
 			}
-			
 			if(operationSymbol.equals("+")) {
-				if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
-					// (+a) + (+b) = a + b
-					result = addition(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
-					// (+a) + (-b) = a - b
-					result = subtraction(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
-					// (-a) + (+b) = b - a
-					result = subtraction(secondOperand, firstOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
-					// (-a) + (-b) = -(a + b)
-					isResultMinus = true;
-					result = addition(secondOperand, firstOperand);					
+				if(signOfFirstOp.equals("+")) {
+					// +a + b
+					caculationResult = addition(firstOperand, secondOperand);	
+				} else if(signOfFirstOp.equals("-")) {
+					// -a + b = b - a
+					caculationResult = subtraction(secondOperand, firstOperand);
 				}
 			} else if(operationSymbol.equals("-")) {
-				if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
-					// (+a) - (+b) = a - b
-					result = subtraction(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
-					// (+a) - (-b) = a + b
-					result = addition(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
-					// (-a) - (+b) = -a - b = -(a + b)
+				if(signOfFirstOp.equals("+")){
+					// +a - b = a - b
+					caculationResult = subtraction(firstOperand, secondOperand);
+				} else if(signOfFirstOp.equals("-")) {
+					// -a - b = -(a + b)
 					isResultMinus = true;
-					result = addition(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
-					// (-a) - (-b) = -a + b = b - a
-					result = subtraction(secondOperand, firstOperand);
+					caculationResult = addition(firstOperand, secondOperand);
 				}
 			} else if(operationSymbol.equals("*")) {
-				if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("+")) {
-					// (+a) * (+b) = a * b
-					result = multiplication(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("+") && signOfSecondOperand.equals("-")) {
-					// (+a) * (-b) = -(a * b)
+				if(signOfFirstOp.equals("+")){
+					// +a * b = a * b
+					caculationResult = multiplication(firstOperand, secondOperand);	
+				} else if(signOfFirstOp.equals("-")){
+					// -a * b = -(a * b)
 					isResultMinus = true;
-					result = multiplication(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("+")) {
-					// (-a) * (+b) = -(a * b)
-					isResultMinus = true;
-					result = multiplication(firstOperand, secondOperand);
-				} else if(signOfFirstOperand.equals("-") && signOfSecondOperand.equals("-")) {
-					// (-a) * (-b) = a * b
-					result = multiplication(firstOperand, secondOperand);					
+					caculationResult = multiplication(firstOperand, secondOperand);
 				}
 			}
-		}
-		printResult(result);
+		} else {
+			// a (+,-,*) (+,-) b
+			String operationSymbol = extractedSigns[0];
+			String signOfSecondOperand = extractedSigns[1];
+			int operationSymbolStartPos = extractedSignsStartPos[0];
+			byte[] firstOperand = new byte[operationSymbolStartPos];
+			for(int i = 0; i < operationSymbolStartPos; i++){
+				firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(i))); 
+			}
+			byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+2)];
+			for(int j = 0, k = operationSymbolStartPos + 2; k < input.length(); j++, k++){
+				secondOperand[j] = Byte.parseByte(String.valueOf(input.charAt(k))); 
+			}
+			if(operationSymbol.equals("+")) {
+				if(signOfSecondOperand.equals("+")) {
+					// a + (+b) = a + b
+					caculationResult = addition(firstOperand, secondOperand);
+				} else if(extractedSigns[1].equals("-")) {
+					// a + (-b) = a - b
+					caculationResult = subtraction(firstOperand, secondOperand);
+				}
+			} else if(operationSymbol.equals("-")) {
+				if(signOfSecondOperand.equals("+")) {
+					// a - (+b) = a - b
+					caculationResult = subtraction(firstOperand, secondOperand);
+				} else if(signOfSecondOperand.equals("-")) {
+					// a - (-b) = a + b
+					caculationResult = addition(firstOperand, secondOperand);
+				}
+			} else if(operationSymbol.equals("*")) {
+				if(signOfSecondOperand.equals("+")) {
+					// a * (+b) = a * b
+					caculationResult = multiplication(firstOperand, secondOperand);
+				} else if(signOfSecondOperand.equals("-")) {
+					// a * (-b) = - (a * b)
+					isResultMinus = true;
+					caculationResult = multiplication(firstOperand, secondOperand);
+				}
+			}
+		}		
 	}
-	
+
+	private static void handleOneSign(String input) {
+		String operationSymbol = extractedSigns[0];
+		int operationSymbolStartPos = extractedSignsStartPos[0];
+		
+		if(operationSymbolStartPos == 0) {
+			throw new IllegalArgumentException("Input isn't correct.");
+		}
+		
+		byte[] firstOperand = new byte[operationSymbolStartPos];
+		for(int i = 0; i < operationSymbolStartPos; i++){
+			firstOperand[i] = Byte.parseByte(String.valueOf(input.charAt(i))); 
+		}
+		byte[] secondOperand = new byte[input.length() - (operationSymbolStartPos+1)];
+		for(int j = 0, k = operationSymbolStartPos + 1; k < input.length(); j++, k++){
+			secondOperand[j] = Byte.parseByte(String.valueOf(input.charAt(k))); 
+		}	
+		if(operationSymbol.equals("+")) {
+			caculationResult = addition(firstOperand, secondOperand);
+		} else if(operationSymbol.equals("-")) {
+			caculationResult = subtraction(firstOperand, secondOperand);
+		} else if(operationSymbol.equals("*")) {
+			caculationResult = multiplication(firstOperand, secondOperand);
+		}		
+	}
+
 	private static int [] addition(byte[] firstOperand, byte[] secondOperand) {
 		int firstOperandLength = firstOperand.length;
 		int secondOperandLength = secondOperand.length;
